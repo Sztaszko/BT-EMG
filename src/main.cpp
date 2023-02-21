@@ -8,10 +8,6 @@
 
 bool device_connected = false;
 bool congestedBT = false;
-bool sending = false;
-int send_samples_cnt = 0;
-int samples_to_send = 0;
-unsigned short value_to_send;
 const int EMG_CH1 = 36;
 const int EMG_CH2 = 39;
 const int EMG_CH3 = 34;
@@ -29,7 +25,6 @@ BluetoothSerial SerialBT;
 TaskHandle_t TaskRead;
 TaskHandle_t TaskSend;
 StreamBufferHandle_t dataStream;
-
 hw_timer_t *readTimer = NULL;
 
 
@@ -91,8 +86,8 @@ void taskSendCode(void * pvParameters) {
       if (!congestedBT) {
         xStreamBufferReceive(dataStream, send_buffer.values, send_buffer_size*sizeof(uint16_t), portMAX_DELAY);
       }
-      Serial.print("Sending: ");
-      Serial.println(send_buffer.values[0]);
+      // Serial.print("Sending: ");
+      // Serial.println(send_buffer.values[0]);
       SerialBT.write(send_buffer.bytes, send_buffer_size*sizeof(uint16_t));
     }
   }
