@@ -8,11 +8,13 @@
 
 bool device_connected = false;
 bool congestedBT = false;
+
 const int EMG_CH1 = 36;
 const int EMG_CH2 = 39;
 const int EMG_CH3 = 34;
 const short channels = 3;
 const int sampling_freq = 1000; //Hz
+const int storage_time = 5; //seconds
 const unsigned int send_buffer_size = channels*500;
 
 union {
@@ -157,7 +159,7 @@ void setup() {
   Serial.println("The device has started");
 
   dataStream = xStreamBufferCreate(
-    channels*sizeof(uint16_t)*sampling_freq*5,
+    channels*sizeof(uint16_t)*sampling_freq*storage_time,
     sizeof(send_buffer.bytes)); /* Alert at the size of send buffer */
   if (dataStream == NULL) {
     Serial.println("Error creating the data stream buffer");
