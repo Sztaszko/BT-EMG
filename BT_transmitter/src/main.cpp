@@ -103,6 +103,7 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
         case ESP_SPP_SRV_OPEN_EVT:
           device_connected = true;
           Serial.println("BT client connected");
+          // TODO investigate - ADC is 0 at first ms after connection, maybe add small delay?
           timerRestart(readTimer);
           timerAlarmEnable(readTimer);
           break;
