@@ -1,16 +1,32 @@
 import bluetooth
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
-measurement_time_s = 5
+parser = argparse.ArgumentParser(
+                    prog='read.py',
+                    description='Script connecting with EMG device via Bluetoth and saving results to files. \
+                        The device is sampling at constant frequency of 1 kHz.',
+                    epilog='Script for research purposes only.')
+
+parser.add_argument('measurement_time_s', metavar='T', type=int, nargs='?', default=5, 
+                    help='Measurement time')
+parser.add_argument('BT_addr', metavar='Addr', type=str, nargs='?', default="FC:F5:C4:19:6D:E2",
+                    help='Bluetooth device address')
+parser.add_argument('port', metavar='P', type=int, nargs='?', default=1,
+                    help='Bluetooth device port')
+
+args = parser.parse_args()
+
+measurement_time_s = args.measurement_time_s
+bd_addr = args.BT_addr
+port = args.port
+
 sampling_freq = 1000 #Hz
 channels = 3
 bytes_per_value = 2
 values_to_receive = measurement_time_s*sampling_freq
 received_data = np.empty((channels, values_to_receive))
-# Define the Bluetooth device address and port number
-bd_addr = "FC:F5:C4:19:6D:E2"
-port = 1 
 
 # Create a Bluetooth socket and connect to the device
 sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
