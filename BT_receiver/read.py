@@ -2,6 +2,8 @@ import bluetooth
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import json
+from datetime import datetime
 
 parser = argparse.ArgumentParser(
                     prog='read.py',
@@ -44,6 +46,17 @@ for i in range(values_to_receive):
 # Close the socket
 sock.close()
 
+data_dict = {
+    "measurement_time_s" : measurement_time_s,
+    "sampling_freq" : sampling_freq,
+    "channels": channels,
+    "channel1": received_data[0],
+    "channel2": received_data[1],
+    "channel3": received_data[2],
+}
+
+with open('signals_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.json', 'w') as fp:
+    json.dump(data_dict, fp, indent=3)
 
 # Plot the received data for each channel
 for channel in range(channels):
