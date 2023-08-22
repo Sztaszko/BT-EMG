@@ -52,10 +52,10 @@ data_dict = {
     "channels": channels,
     "channel1": received_data[0],
     "channel2": received_data[1],
-    "channel3": received_data[2],
+    "channel3": received_data[2]
 }
 
-with open('signals_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.json', 'w') as fp:
+with open('output/EMG_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.json', 'w') as fp:
     json.dump(data_dict, fp, indent=3)
 
 # Plot the received data for each channel

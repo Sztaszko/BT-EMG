@@ -17,7 +17,9 @@ read.py [-h] [T] [Addr] [P]
 positional arguments:
 
   T           Measurement time
+
   Addr        Bluetooth device address
+  
   P           Bluetooth device port
 
 optional arguments:
