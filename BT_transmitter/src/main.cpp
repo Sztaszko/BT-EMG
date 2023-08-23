@@ -1,9 +1,15 @@
 #include "Arduino.h"
 #include "BluetoothSerial.h"
 #include <freertos/stream_buffer.h>
+#include <Adafruit_ADS1X15.h>
+#include <Wire.h>
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run 'make menuconfig' to enable it
+#endif
+
+#ifndef IRAM_ATTR
+#define IRAM_ATTR
 #endif
 
 bool device_connected = false;
@@ -23,6 +29,8 @@ union {
 } send_buffer;
 
 BluetoothSerial SerialBT;
+TwoWire I2CADC = TwoWire(0);
+Adafruit_ADS1015 ADC;
 
 TaskHandle_t TaskRead;
 TaskHandle_t TaskSend;
@@ -35,6 +43,8 @@ void IRAM_ATTR readTimerISR() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (device_connected) {
+
+    // ***** CODE FOR INTERNAL ADC *****
     emg_value = analogRead(EMG_CH1);
     xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
     // switch context if necessary
@@ -53,15 +63,37 @@ void IRAM_ATTR readTimerISR() {
     if(xHigherPriorityTaskWoken) {
           portYIELD_FROM_ISR();
     }
+    // ***** END CODE FOR INTERNAL ADC *****
+
+    // emg_value = ADC.readADC_SingleEnded(0);
+    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    // // switch context if necessary
+    // if(xHigherPriorityTaskWoken) {
+    //     portYIELD_FROM_ISR();
+    // }
+    
+    // emg_value = ADC.readADC_SingleEnded(1);
+    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    // if(xHigherPriorityTaskWoken) {
+    //       portYIELD_FROM_ISR();
+    // }
+    
+    // emg_value = ADC.readADC_SingleEnded(2);
+    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    // if(xHigherPriorityTaskWoken) {
+    //       portYIELD_FROM_ISR();
+    // }
+
   }
 }
+
 
 // TODO: change to read from external ADC unit if used
 void taskReadCode(void * pvParameters) {
   Serial.print("Task Read running on core ");
   Serial.println(xPortGetCoreID());
 
-  /* setup timer alarm, but enable when bluetooth connected */
+  // setup timer alarm, but enable when bluetooth connected
   readTimer = timerBegin(0, 80, true); // prescaler for 1 us
   timerAttachInterrupt(readTimer, &readTimerISR, true);
   timerAlarmWrite(readTimer, 1000000/sampling_freq, true);
@@ -71,6 +103,7 @@ void taskReadCode(void * pvParameters) {
   }
   vTaskDelete(NULL);
 }
+
 
 void taskSendCode(void * pvParameters) {
   Serial.print("Task Send running on core ");
@@ -148,6 +181,8 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
 void setup() {
   Serial.begin(115200);
   delay(100); // give time to initialize
+
+  I2CADC.begin(SDA, SCL, 100000);
   
   SerialBT.register_callback(BTCallback);
   if (!SerialBT.begin("EMGsensor")) {
@@ -156,6 +191,7 @@ void setup() {
     Serial.println("Bluetooth initialized");
   }
   delay(100);
+
   
   Serial.println("The device has started");
 
@@ -166,6 +202,11 @@ void setup() {
     Serial.println("Error creating the data stream buffer");
   }
   
+  // if (!ADC.begin(ADS1X15_ADDRESS, &I2CADC)) {
+  //   Serial.println("Failed to initialize ADS.");
+  // }
+
+
   xTaskCreatePinnedToCore(
       taskReadCode,   /* Task function. */
       "Read",         /* name of task. */
@@ -175,6 +216,7 @@ void setup() {
       &TaskRead,      /* Task handle to keep track of created task */
       0);             /* pin task to core 0 */
   delay(100);
+
 
   xTaskCreatePinnedToCore(
       taskSendCode,   /* Task function. */
