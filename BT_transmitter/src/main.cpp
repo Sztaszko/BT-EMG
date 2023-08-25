@@ -17,7 +17,7 @@ bool congestedBT = false;
 
 const int EMG_CH1 = 36;
 const int EMG_CH2 = 39;
-const int EMG_CH3 = 34;
+const int EMG_CH3 = 32; //32 for current lolin32
 const short channels = 3;
 const int sampling_freq = 1000; //Hz
 const int storage_time = 5; //seconds
@@ -137,7 +137,7 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
           device_connected = true;
           Serial.println("BT client connected");
           // TODO investigate - ADC is 0 at first ms after connection, maybe add small delay?
-          delay(10);
+          delay(100);
           timerRestart(readTimer);
           timerAlarmEnable(readTimer);
           break;
