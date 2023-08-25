@@ -41,7 +41,7 @@ for i in range(values_to_receive):
         data = sock.recv(bytes_per_value)
         if not data:
             pass
-        received_data[channel][i] = int.from_bytes(data, byteorder='big')
+        received_data[channel][i] = int.from_bytes(data, byteorder='little', signed=False)
         print(received_data[channel][i])
 
 
