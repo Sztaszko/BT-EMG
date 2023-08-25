@@ -1,8 +1,8 @@
 #include "Arduino.h"
 #include "BluetoothSerial.h"
 #include <freertos/stream_buffer.h>
-#include <Adafruit_ADS1X15.h>
-#include <Wire.h>
+// #include <Adafruit_ADS1X15.h>
+// #include <Wire.h>
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run 'make menuconfig' to enable it
@@ -29,8 +29,8 @@ union {
 } send_buffer;
 
 BluetoothSerial SerialBT;
-TwoWire I2CADC = TwoWire(0);
-Adafruit_ADS1015 ADC;
+// TwoWire I2CADC = TwoWire(0);
+// Adafruit_ADS1015 ADC;
 
 TaskHandle_t TaskRead;
 TaskHandle_t TaskSend;
@@ -137,6 +137,7 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
           device_connected = true;
           Serial.println("BT client connected");
           // TODO investigate - ADC is 0 at first ms after connection, maybe add small delay?
+          delay(10);
           timerRestart(readTimer);
           timerAlarmEnable(readTimer);
           break;
@@ -147,6 +148,8 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
           timerStop(readTimer);
           timerWrite(readTimer, 0);
           xStreamBufferReset(dataStream);
+          Serial.println("Restarting platform");
+          esp_restart(); // workaround of the no reconnection issue
           break;
         case ESP_SPP_CONG_EVT:
           Serial.println("BT congested event");
@@ -182,7 +185,7 @@ void setup() {
   Serial.begin(115200);
   delay(100); // give time to initialize
 
-  I2CADC.begin(SDA, SCL, 100000);
+  // I2CADC.begin(SDA, SCL, 100000);
   
   SerialBT.register_callback(BTCallback);
   if (!SerialBT.begin("EMGsensor")) {

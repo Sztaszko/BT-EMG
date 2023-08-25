@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import argparse
 import json
 from datetime import datetime
+import pandas as pd
 
 parser = argparse.ArgumentParser(
                     prog='read.py',
@@ -13,7 +14,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('measurement_time_s', metavar='T', type=int, nargs='?', default=5, 
                     help='Measurement time')
-parser.add_argument('BT_addr', metavar='Addr', type=str, nargs='?', default="FC:F5:C4:19:6D:E2",
+parser.add_argument('BT_addr', metavar='Addr', type=str, nargs='?', default="a4:cf:12:25:68:b6",
                     help='Bluetooth device address')
 parser.add_argument('port', metavar='P', type=int, nargs='?', default=1,
                     help='Bluetooth device port')
@@ -32,6 +33,7 @@ received_data = np.empty((channels, values_to_receive))
 
 # Create a Bluetooth socket and connect to the device
 sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+sock.settimeout(5)
 sock.connect((bd_addr, port))
 
 for i in range(values_to_receive):
@@ -46,17 +48,9 @@ for i in range(values_to_receive):
 # Close the socket
 sock.close()
 
-data_dict = {
-    "measurement_time_s" : measurement_time_s,
-    "sampling_freq" : sampling_freq,
-    "channels": channels,
-    "channel1": received_data[0],
-    "channel2": received_data[1],
-    "channel3": received_data[2]
-}
+df = pd.DataFrame({"channel1" : received_data[0], "channel2" : received_data[1], "channel3" : received_data[2]})
+df.to_csv('output/EMG_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.csv', index=False)
 
-with open('output/EMG_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.json', 'w') as fp:
-    json.dump(data_dict, fp, indent=3)
 
 # Plot the received data for each channel
 for channel in range(channels):
