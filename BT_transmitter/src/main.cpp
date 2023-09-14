@@ -44,28 +44,6 @@ void IRAM_ATTR readTimerISR() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (device_connected) {
-
-    // ***** CODE FOR INTERNAL ADC *****
-    // emg_value = analogRead(EMG_CH1);
-    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    // // switch context if necessary
-    // if(xHigherPriorityTaskWoken) {
-    //     portYIELD_FROM_ISR();
-    // }
-    
-    // emg_value = analogRead(EMG_CH2);
-    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    // if(xHigherPriorityTaskWoken) {
-    //       portYIELD_FROM_ISR();
-    // }
-    
-    // emg_value = analogRead(EMG_CH3);
-    // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    // if(xHigherPriorityTaskWoken) {
-    //       portYIELD_FROM_ISR();
-    // }
-    // ***** END CODE FOR INTERNAL ADC *****
-
     emg_value = adc.read(MCP3208::Channel::SINGLE_0);
     xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
     // switch context if necessary
@@ -110,10 +88,6 @@ void taskSendCode(void * pvParameters) {
   Serial.println(xPortGetCoreID());
   
   for(;;) {
-//    unsigned int messages_no = uxQueueMessagesWaiting(dataQueue);
-//    Serial.print("Messages in the queue ");
-//    Serial.println(messages_no);
-
     if (!device_connected) {
       delay(50u);
     } else {
@@ -121,8 +95,6 @@ void taskSendCode(void * pvParameters) {
       if (!congestedBT) {
         xStreamBufferReceive(dataStream, send_buffer.values, send_buffer_size*sizeof(uint16_t), portMAX_DELAY);
       }
-      // Serial.print("Sending: ");
-      // Serial.println(send_buffer.values[0]);
       SerialBT.write(send_buffer.bytes, send_buffer_size*sizeof(uint16_t));
     }
   }
@@ -136,7 +108,6 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
         case ESP_SPP_SRV_OPEN_EVT:
           device_connected = true;
           Serial.println("BT client connected");
-          // TODO investigate - ADC is 0 at first ms after connection, maybe add small delay?
           delay(100);
           timerRestart(readTimer);
           timerAlarmEnable(readTimer);
@@ -153,14 +124,6 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
           break;
         case ESP_SPP_CONG_EVT:
           Serial.println("BT congested event");
-          // if (param->cong.cong == 0) {
-          //   if (congestedBT) {
-          //     congestedBT = false;
-          //     resendData();
-          //   } else {
-          //     sendData();
-          //   }
-          // }
           break;
         case ESP_SPP_WRITE_EVT:
           if (param->write.status == ESP_SPP_SUCCESS) {
