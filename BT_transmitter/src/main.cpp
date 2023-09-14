@@ -1,8 +1,8 @@
 #include "Arduino.h"
 #include "BluetoothSerial.h"
 #include <freertos/stream_buffer.h>
-// #include <Adafruit_ADS1X15.h>
-// #include <Wire.h>
+#include <SPI.h>
+#include <Mcp320x.h>
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run 'make menuconfig' to enable it
@@ -17,10 +17,12 @@ bool congestedBT = false;
 
 const int EMG_CH1 = 36;
 const int EMG_CH2 = 39;
-const int EMG_CH3 = 32; //32 for current lolin32
+const int EMG_CH3 = 32; //32 for lolin32
 const short channels = 3;
-const int sampling_freq = 1000; //Hz
+const int sampling_freq = 1500; //Hz
 const int storage_time = 5; //seconds
+const int ADC_VREF = 3300; // 3.3V ADC Vref
+const unsigned int ADC_CLK = 1600000; //SPI clock 1.6 MHz
 const unsigned int send_buffer_size = channels*500;
 
 union {
@@ -29,8 +31,7 @@ union {
 } send_buffer;
 
 BluetoothSerial SerialBT;
-// TwoWire I2CADC = TwoWire(0);
-// Adafruit_ADS1015 ADC;
+MCP3208 adc(ADC_VREF, SS);
 
 TaskHandle_t TaskRead;
 TaskHandle_t TaskSend;
@@ -45,50 +46,49 @@ void IRAM_ATTR readTimerISR() {
   if (device_connected) {
 
     // ***** CODE FOR INTERNAL ADC *****
-    emg_value = analogRead(EMG_CH1);
-    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    // switch context if necessary
-    if(xHigherPriorityTaskWoken) {
-        portYIELD_FROM_ISR();
-    }
-    
-    emg_value = analogRead(EMG_CH2);
-    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    if(xHigherPriorityTaskWoken) {
-          portYIELD_FROM_ISR();
-    }
-    
-    emg_value = analogRead(EMG_CH3);
-    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
-    if(xHigherPriorityTaskWoken) {
-          portYIELD_FROM_ISR();
-    }
-    // ***** END CODE FOR INTERNAL ADC *****
-
-    // emg_value = ADC.readADC_SingleEnded(0);
+    // emg_value = analogRead(EMG_CH1);
     // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
     // // switch context if necessary
     // if(xHigherPriorityTaskWoken) {
     //     portYIELD_FROM_ISR();
     // }
     
-    // emg_value = ADC.readADC_SingleEnded(1);
+    // emg_value = analogRead(EMG_CH2);
     // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
     // if(xHigherPriorityTaskWoken) {
     //       portYIELD_FROM_ISR();
     // }
     
-    // emg_value = ADC.readADC_SingleEnded(2);
+    // emg_value = analogRead(EMG_CH3);
     // xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
     // if(xHigherPriorityTaskWoken) {
     //       portYIELD_FROM_ISR();
     // }
+    // ***** END CODE FOR INTERNAL ADC *****
+
+    emg_value = adc.read(MCP3208::Channel::SINGLE_0);
+    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    // switch context if necessary
+    if(xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
+    }
+    
+    emg_value = adc.read(MCP3208::Channel::SINGLE_1);
+    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    if(xHigherPriorityTaskWoken) {
+          portYIELD_FROM_ISR();
+    }
+    
+    emg_value = adc.read(MCP3208::Channel::SINGLE_2);
+    xStreamBufferSendFromISR(dataStream, &emg_value, sizeof(emg_value), &xHigherPriorityTaskWoken);
+    if(xHigherPriorityTaskWoken) {
+          portYIELD_FROM_ISR();
+    }
 
   }
 }
 
 
-// TODO: change to read from external ADC unit if used
 void taskReadCode(void * pvParameters) {
   Serial.print("Task Read running on core ");
   Serial.println(xPortGetCoreID());
@@ -184,8 +184,6 @@ static void BTCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
 void setup() {
   Serial.begin(115200);
   delay(100); // give time to initialize
-
-  // I2CADC.begin(SDA, SCL, 100000);
   
   SerialBT.register_callback(BTCallback);
   if (!SerialBT.begin("EMGsensor")) {
@@ -205,9 +203,13 @@ void setup() {
     Serial.println("Error creating the data stream buffer");
   }
   
-  // if (!ADC.begin(ADS1X15_ADDRESS, &I2CADC)) {
-  //   Serial.println("Failed to initialize ADS.");
-  // }
+
+  pinMode(SS, OUTPUT);
+  digitalWrite(SS, HIGH);
+
+  SPISettings settings(ADC_CLK, MSBFIRST, SPI_MODE0);
+  SPI.begin();
+  SPI.beginTransaction(settings);
 
 
   xTaskCreatePinnedToCore(
