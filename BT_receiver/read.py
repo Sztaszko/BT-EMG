@@ -25,7 +25,7 @@ measurement_time_s = args.measurement_time_s
 bd_addr = args.BT_addr
 port = args.port
 
-sampling_freq = 1000 #Hz
+sampling_freq = 1500 #Hz
 channels = 3
 bytes_per_value = 2
 values_to_receive = measurement_time_s*sampling_freq
@@ -53,9 +53,16 @@ df.to_csv('output/EMG_'+ datetime.now().strftime("%d%m%Y_%H%M%S") +'.csv', index
 
 
 # Plot the received data for each channel
-for channel in range(channels):
-    plt.plot(received_data[channel])
-    plt.title('Channel {}'.format(channel + 1))
-    plt.xlabel('Sample index')
-    plt.ylabel('Value')
-    plt.show()
+# for channel in range(channels):
+#     plt.plot(received_data[channel]/4095 * 3.3)
+#     plt.title('Channel {}'.format(channel + 1))
+#     plt.xlabel('Sample index')
+#     plt.ylabel('Value')
+#     plt.show()
+
+
+plt.plot(received_data[0]/4095 * 3300)
+plt.title('Channel {}'.format(1))
+plt.xlabel('Sample index')
+plt.ylabel('Voltage [mV]')
+plt.show()
